@@ -28,6 +28,11 @@ struct PhotoGroupApp: App {
         for i in 0..<fetchResult.count {
             let asset : PHAsset = fetchResult.object(at: i)
             print("LOL", asset, asset.localIdentifier)
+            
+            if asset.mediaType != .image {
+                continue
+            }
+            
 
             let opts = PHContentEditingInputRequestOptions()
             asset.requestContentEditingInput(with: opts) { input, info in
@@ -35,10 +40,14 @@ struct PhotoGroupApp: App {
                     print("=======input is nil! ");
                     return;
                 }
-                print("=========!!!!=======got input!", input, info, input.fullSizeImageURL)
+                guard let url = input.fullSizeImageURL else {
+                    print("======= no url")
+                    return
+                }
+                print("=========!!!!=======got input!", input, info, url)
             }
 
-            break
+
         }
     }
     
