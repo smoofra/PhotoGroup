@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Photos
 
 @main
 struct PhotoGroupApp: App {
@@ -13,5 +14,37 @@ struct PhotoGroupApp: App {
         WindowGroup {
             ContentView()
         }
+    }
+    
+    func gotAuthorization(_ status:PHAuthorizationStatus) {
+        if status != .authorized {
+            print("not authorized :(")
+            return
+        }
+        print ("!!!===!!!  got auth!")
+        let fetchResult = Photos.PHAsset.fetchAssets(with: PHFetchOptions())
+        print("========lol!!!", fetchResult.count)
+        
+        for i in 0..<fetchResult.count {
+            let asset : PHAsset = fetchResult.object(at: i)
+            print("LOL", asset, asset.localIdentifier)
+
+            let opts = PHContentEditingInputRequestOptions()
+            asset.requestContentEditingInput(with: opts) { input, info in
+                guard let input = input else {
+                    print("=======input is nil! ");
+                    return;
+                }
+                print("=========!!!!=======got input!", input, info, input.fullSizeImageURL)
+            }
+
+            break
+        }
+    }
+    
+    init() {
+        print("======== requesting authorization.....")
+        Photos.PHPhotoLibrary.requestAuthorization(for: .readWrite, handler:self.gotAuthorization)
+        
     }
 }
