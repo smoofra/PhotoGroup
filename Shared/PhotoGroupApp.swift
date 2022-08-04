@@ -16,6 +16,8 @@ func quote(_ s:String) -> String {
     }
 }
 
+let style = Date.ISO8601FormatStyle(dateSeparator: .dash , dateTimeSeparator: .space, timeZone: .current)
+
 @main
 struct PhotoGroupApp: App {
     var body: some Scene {
@@ -32,7 +34,7 @@ struct PhotoGroupApp: App {
             return;
         }
 
-        f.write("creationDate,modificationDate,mediaType,mediaSubtypes,flags,url\n".data(using: .utf8)!)
+        f.write("id,creationDate,modificationDate,mediaType,mediaSubtypes,flags,filename,size,url\n".data(using: .utf8)!)
 
         let fetchResult = Photos.PHAsset.fetchAssets(with: PHFetchOptions())
 
@@ -46,44 +48,30 @@ struct PhotoGroupApp: App {
                 continue
             }
             
-            let resources = PHAssetResource.assetResources(for: asset)
-            if resources.count > 1 {
-                print("oh oh", resources);
-            }
-
             
-            
-
-            let opts = PHContentEditingInputRequestOptions()
-            g.enter()
-            asset.requestContentEditingInput(with: opts) { input, info in
-                defer { g.leave() }
-                guard let input = input else {
-                    print("==input is nil! ");
-                    return;
-                }
-
-                let style = Date.ISO8601FormatStyle(dateSeparator: .dash , dateTimeSeparator: .space, timeZone: .current)
-
-                var flags = ""
-                if input.adjustmentData != nil {
-                    flags += "🎛️"
-                }
-                if asset.isFavorite {
-                    flags += "❤️"
-                }
+            for resource in PHAssetResource.assetResources(for: asset) {
+                
+                let flags = asset.isFavorite ? "❤️" : ""
 
 
-                let line = String(format: "%@,%@,%d,%d,%@,%@\n",
+                let line = String(format: "%@,%@,%@,%d,%d,%@,%@,%d,%@\n",
+                                  asset.localIdentifier,
                                   asset.creationDate?.ISO8601Format(style) ?? "",
                                   asset.modificationDate?.ISO8601Format(style) ?? "",
                                   asset.mediaType.rawValue,
                                   asset.mediaSubtypes.rawValue,
                                   flags,
-                                  quote(input.fullSizeImageURL?.absoluteString ?? ""))
+                                  quote(resource.originalFilename),
+                                  resource_fileSize(resource),
+                                  quote(resource_fileURL(resource)?.absoluteString ?? ""))
+
+
                 f.write(line.data(using: .utf8)!)
+
             }
         }
+
+
 
         g.wait()
         print("done")
