@@ -38,6 +38,14 @@ struct RuntimeError: Error {
     
 }
 
+func unwrap<T> (_ o : T?) throws -> T {
+    if let v = o {
+        return v
+    } else {
+        throw RuntimeError(message: "missing value")
+    }
+}
+
 
 @main
 struct PhotoGroupApp: App {
@@ -65,14 +73,17 @@ struct PhotoGroupApp: App {
         }
         
         let data = try String(contentsOf: URL.init(fileURLWithPath: path))
-        
-        print("len data = ", data.count)
-        
-        let csv = try NamedCSV(string: data)
+        let csv = try NamedCSV(string: data, loadColumns: false)
+            
+        for k in ["modificationDate"] {
+            if !csv.header.contains(k) {
+                throw RuntimeError(message: "csv is incomplete")
+            }
+        }
         
         for row in csv.rows {
             print("row", row)
-            let d = try Date(row["modificationDate"]!, strategy: dateStyle)
+            let d = try Date(try unwrap(row["modificationDate"]), strategy: dateStyle)
             print(d)
 
         }
