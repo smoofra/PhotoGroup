@@ -63,7 +63,6 @@ struct PhotoGroupApp: App {
             }
             
             for resource in PHAssetResource.assetResources(for: asset) {
-
                 g.enter()
                 var count = 0
                 var hash = SHA256()
@@ -72,8 +71,6 @@ struct PhotoGroupApp: App {
                     hash.update(data: data)
                 } completionHandler: { e in
                     let flags = asset.isFavorite ? "❤️" : ""
-                    let size = resource_fileSize(resource)
-                    
                     let line = String(format: "%@,%@,%@,%d,%d,%@,%d,%@,%d,%@,%@",
                                       asset.localIdentifier,
                                       asset.creationDate?.ISO8601Format(style) ?? "",
@@ -83,8 +80,8 @@ struct PhotoGroupApp: App {
                                       flags,
                                       resource.type.rawValue,
                                       quote(resource.originalFilename),
-                                      size,
-                                      count == size ?  hexDigest(hash: hash) : "",
+                                      count,
+                                      e == nil ?  hexDigest(hash: hash) : "",
                                       quote(resource_fileURL(resource)?.absoluteString ?? ""))
 
                     f.write(line.data(using: .utf8)!)
