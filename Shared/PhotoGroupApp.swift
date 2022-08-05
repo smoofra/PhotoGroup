@@ -31,7 +31,13 @@ func w_rename(old: String, new :String) throws -> ()  {
     }
 }
 
-let style = Date.ISO8601FormatStyle(dateSeparator: .dash , dateTimeSeparator: .space, timeZone: .current)
+let dateStyle = Date.ISO8601FormatStyle(dateSeparator: .dash , dateTimeSeparator: .space, timeZone: .current)
+
+struct RuntimeError: Error {
+    var message : String
+    
+}
+
 
 @main
 struct PhotoGroupApp: App {
@@ -41,19 +47,44 @@ struct PhotoGroupApp: App {
         }
     }
     
-    func writeCSV(filename:String) {
-
+    func documentPath(filename: String) throws -> String {
         let documentsDirectories = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
         if documentsDirectories.count < 1 {
-            print("can't find Documents")
+            throw RuntimeError(message: "can't find Documents folder")
         }
         let documentsDirectory = documentsDirectories[0]
-        let path = documentsDirectory.appendingPathComponent(filename).path
-        print("writing csv to ", path)
-        FileManager.default.createFile(atPath: path, contents: Data(), attributes: nil)
-        guard let f = FileHandle(forWritingAtPath: path) else {
-            print("can't open file:", path);
-            return;
+        return documentsDirectory.appendingPathComponent(filename).path
+    }
+    
+    func readCSV(path: String) throws {
+        
+        print("reading csv from", path)
+
+        if !FileManager.default.fileExists(atPath: path) {
+            return
+        }
+        
+        let data = try String(contentsOf: URL.init(fileURLWithPath: path))
+        
+        print("len data = ", data.count)
+        
+        let csv = try NamedCSV(string: data)
+        
+        for row in csv.rows {
+            print("row", row)
+            let d = try Date(row["modificationDate"]!, strategy: dateStyle)
+            print(d)
+
+        }
+    }
+    
+    func writeCSV(path:String) throws {
+        
+        let tmp_path = path + ".tmp"
+        print("writing csv to ", tmp_path)
+        FileManager.default.createFile(atPath: tmp_path, contents: Data(), attributes: nil)
+        guard let f = FileHandle(forWritingAtPath: tmp_path) else {
+            throw RuntimeError(message: "can't open csv file for writing")
         }
 
         f.write("id,creationDate,modificationDate,mediaType,mediaSubtypes,flags,resourceType,filename,size,sha256,url\n".data(using: .utf8)!)
@@ -81,8 +112,8 @@ struct PhotoGroupApp: App {
                     let flags = asset.isFavorite ? "❤️" : ""
                     let line = String(format: "%@,%@,%@,%d,%d,%@,%d,%@,%d,%@,%@",
                                       asset.localIdentifier,
-                                      asset.creationDate?.ISO8601Format(style) ?? "",
-                                      asset.modificationDate?.ISO8601Format(style) ?? "",
+                                      asset.creationDate?.ISO8601Format(dateStyle) ?? "",
+                                      asset.modificationDate?.ISO8601Format(dateStyle) ?? "",
                                       asset.mediaType.rawValue,
                                       asset.mediaSubtypes.rawValue,
                                       flags,
@@ -104,18 +135,13 @@ struct PhotoGroupApp: App {
             }
         }
 
-
-
         g.wait()
-        print("done")
-
-        do {
-            try w_rename(old: path, new: path + ".xxx")
-            let c = try FileManager.default.contentsOfDirectory(atPath: documentsDirectory.path)
-            print("wheee", c)
-        } catch {
-            print("oh no")
-        }
+        
+        try f.close()
+        print("moving to ", path)
+        try w_rename(old: tmp_path, new: path)
+        
+        print("done writing csv")
         
 
     }
@@ -126,7 +152,13 @@ struct PhotoGroupApp: App {
             return
         }
         print ("==got authorization.")
-        self.writeCSV(filename: "assets.csv")
+        do {
+            let assets_csv_path = try documentPath(filename: "assets.csv")
+            try self.readCSV(path: assets_csv_path)
+            try self.writeCSV(path: assets_csv_path)
+        } catch {
+            print("oh no!")
+        }
     }
     
     init() {
