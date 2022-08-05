@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Photos
+import CryptoKit
 
 func quote(_ s:String) -> String {
     if s.rangeOfCharacter(from: CharacterSet(charactersIn: ",\"\r\n")) != nil {
@@ -14,6 +15,12 @@ func quote(_ s:String) -> String {
     } else {
         return s
     }
+}
+
+func hexDigest(hash: SHA256) -> String {
+    return String(hash.finalize().flatMap { byte in
+        String(format:"%02x", byte)
+    })
 }
 
 let style = Date.ISO8601FormatStyle(dateSeparator: .dash , dateTimeSeparator: .space, timeZone: .current)
@@ -41,7 +48,7 @@ struct PhotoGroupApp: App {
             return;
         }
 
-        f.write("id,creationDate,modificationDate,mediaType,mediaSubtypes,flags,resourceType,filename,size,url\n".data(using: .utf8)!)
+        f.write("id,creationDate,modificationDate,mediaType,mediaSubtypes,flags,resourceType,filename,size,sha256,url\n".data(using: .utf8)!)
 
         let fetchResult = Photos.PHAsset.fetchAssets(with: PHFetchOptions())
 
@@ -55,27 +62,40 @@ struct PhotoGroupApp: App {
                 continue
             }
             
-            
             for resource in PHAssetResource.assetResources(for: asset) {
+
+                g.enter()
+                var count = 0
+                var hash = SHA256()
+                PHAssetResourceManager.default().requestData(for: resource, options: nil) { data in
+                    count += data.count
+                    hash.update(data: data)
+                } completionHandler: { e in
+                    let flags = asset.isFavorite ? "❤️" : ""
+                    let size = resource_fileSize(resource)
+                    
+                    let line = String(format: "%@,%@,%@,%d,%d,%@,%d,%@,%d,%@,%@",
+                                      asset.localIdentifier,
+                                      asset.creationDate?.ISO8601Format(style) ?? "",
+                                      asset.modificationDate?.ISO8601Format(style) ?? "",
+                                      asset.mediaType.rawValue,
+                                      asset.mediaSubtypes.rawValue,
+                                      flags,
+                                      resource.type.rawValue,
+                                      quote(resource.originalFilename),
+                                      size,
+                                      count == size ?  hexDigest(hash: hash) : "",
+                                      quote(resource_fileURL(resource)?.absoluteString ?? ""))
+
+                    f.write(line.data(using: .utf8)!)
+                    f.write("\n".data(using: .utf8)!)
+                    print(line)
+                    g.leave()
+                }
                 
-                let flags = asset.isFavorite ? "❤️" : ""
-                
-                let line = String(format: "%@,%@,%@,%d,%d,%@,%d,%@,%d,%@\n",
-                                  asset.localIdentifier,
-                                  asset.creationDate?.ISO8601Format(style) ?? "",
-                                  asset.modificationDate?.ISO8601Format(style) ?? "",
-                                  asset.mediaType.rawValue,
-                                  asset.mediaSubtypes.rawValue,
-                                  flags,
-                                  resource.type.rawValue,
-                                  quote(resource.originalFilename),
-                                  resource_fileSize(resource),
-                                  quote(resource_fileURL(resource)?.absoluteString ?? ""))
-
-
-                f.write(line.data(using: .utf8)!)
-
+                break;
             }
+            break;
         }
 
 
