@@ -10,8 +10,7 @@ import Photos
 import CryptoKit
 import SwiftCSV
 
-
-func quote(_ s:String) -> String {
+func csvQuote(_ s:String) -> String {
     if s.rangeOfCharacter(from: CharacterSet(charactersIn: ",\"\r\n")) != nil {
         return "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\""
     } else {
@@ -23,6 +22,13 @@ func hexDigest<T: HashFunction>(hash: T) -> String {
     return String(hash.finalize().flatMap { byte in
         String(format:"%02x", byte)
     })
+}
+
+func w_rename(old: String, new :String) throws -> ()  {
+    let r = rename(NSString(string: old).utf8String, NSString(string: new).utf8String)
+    if r < 0 {
+        throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
+    }
 }
 
 let style = Date.ISO8601FormatStyle(dateSeparator: .dash , dateTimeSeparator: .space, timeZone: .current)
@@ -81,26 +87,37 @@ struct PhotoGroupApp: App {
                                       asset.mediaSubtypes.rawValue,
                                       flags,
                                       resource.type.rawValue,
-                                      quote(resource.originalFilename),
+                                      csvQuote(resource.originalFilename),
                                       count,
                                       e == nil ?  hexDigest(hash: hash) : "",
-                                      quote(resource_fileURL(resource)?.absoluteString ?? ""))
+                                      csvQuote(resource_fileURL(resource)?.absoluteString ?? ""))
 
                     f.write(line.data(using: .utf8)!)
                     f.write("\n".data(using: .utf8)!)
                     print(line)
                     g.leave()
                 }
-                
-                break;
             }
-            break;
+            
+            if i > 10 {
+                break
+            }
         }
 
 
 
         g.wait()
         print("done")
+
+        do {
+            try w_rename(old: path, new: path + ".xxx")
+            let c = try FileManager.default.contentsOfDirectory(atPath: documentsDirectory.path)
+            print("wheee", c)
+        } catch {
+            print("oh no")
+        }
+        
+
     }
 
     func gotAuthorization(_ status:PHAuthorizationStatus) {
