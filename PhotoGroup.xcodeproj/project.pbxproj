@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		464AE355289CBF4800DBA143 /* SwiftCSV.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 464AE354289CBF4800DBA143 /* SwiftCSV.framework */; };
 		464AE358289CBF8C00DBA143 /* SwiftCSV.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 464AE356289CBF8300DBA143 /* SwiftCSV.framework */; };
+		46546A0D289D65FB00C66CD3 /* SwiftCSV.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 464AE356289CBF8300DBA143 /* SwiftCSV.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		469EACBD289C53DD0067D063 /* hack.m in Sources */ = {isa = PBXBuildFile; fileRef = 469EACBC289C53DD0067D063 /* hack.m */; };
 		469EACBE289C53DD0067D063 /* hack.m in Sources */ = {isa = PBXBuildFile; fileRef = 469EACBC289C53DD0067D063 /* hack.m */; };
 		469EACBF289C53DD0067D063 /* hack.m in Sources */ = {isa = PBXBuildFile; fileRef = 469EACBC289C53DD0067D063 /* hack.m */; };
@@ -42,9 +43,24 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		46546A0C289D65EA00C66CD3 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				46546A0D289D65FB00C66CD3 /* SwiftCSV.framework in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		464AE354289CBF4800DBA143 /* SwiftCSV.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftCSV.framework; path = "Carthage/Build/SwiftCSV.xcframework/macos-arm64_x86_64/SwiftCSV.framework"; sourceTree = "<group>"; };
 		464AE356289CBF8300DBA143 /* SwiftCSV.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftCSV.framework; path = "Carthage/Build/SwiftCSV.xcframework/ios-arm64_armv7/SwiftCSV.framework"; sourceTree = "<group>"; };
+		46546A06289D605700C66CD3 /* PhotoGroup (iOS).entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "PhotoGroup (iOS).entitlements"; sourceTree = "<group>"; };
+		46546A0A289D606200C66CD3 /* PhotoGroup--iOS--Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "PhotoGroup--iOS--Info.plist"; sourceTree = "<group>"; };
 		469EACB8289C53DD0067D063 /* PhotoGroup (iOS)-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PhotoGroup (iOS)-Bridging-Header.h"; sourceTree = "<group>"; };
 		469EACB9289C53DD0067D063 /* PhotoGroup (macOS)-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PhotoGroup (macOS)-Bridging-Header.h"; sourceTree = "<group>"; };
 		469EACBA289C53DD0067D063 /* Tests iOS-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Tests iOS-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -102,6 +118,8 @@
 		46F0432C27D253FE0086F2E4 = {
 			isa = PBXGroup;
 			children = (
+				46546A0A289D606200C66CD3 /* PhotoGroup--iOS--Info.plist */,
+				46546A06289D605700C66CD3 /* PhotoGroup (iOS).entitlements */,
 				464AE354289CBF4800DBA143 /* SwiftCSV.framework */,
 				464AE356289CBF8300DBA143 /* SwiftCSV.framework */,
 				46F0433127D253FE0086F2E4 /* Shared */,
@@ -109,6 +127,7 @@
 				46F0434927D253FF0086F2E4 /* Tests iOS */,
 				46F0435527D253FF0086F2E4 /* Tests macOS */,
 				46F0433A27D253FF0086F2E4 /* Products */,
+				46546A07289D605700C66CD3 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -175,6 +194,7 @@
 				46F0433527D253FF0086F2E4 /* Sources */,
 				46F0433627D253FF0086F2E4 /* Frameworks */,
 				46F0433727D253FF0086F2E4 /* Resources */,
+				46546A0C289D65EA00C66CD3 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -496,15 +516,17 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = "PhotoGroup (iOS).entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 29AKDF837Q;
+				DEVELOPMENT_TEAM = Y777V68JVH;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/Carthage/Build/SwiftCSV.xcframework/ios-arm64_armv7",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "PhotoGroup--iOS--Info.plist";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "sync photos between users";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -517,14 +539,15 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.elder-gods.PhotoGroup";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.elder-gods.PhotoGroup0";
 				PRODUCT_NAME = PhotoGroup;
 				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "Shared/PhotoGroup (iOS)-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = "1,2,6";
 			};
 			name = Debug;
 		};
@@ -534,15 +557,17 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = "PhotoGroup (iOS).entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 29AKDF837Q;
+				DEVELOPMENT_TEAM = Y777V68JVH;
 				ENABLE_PREVIEWS = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/Carthage/Build/SwiftCSV.xcframework/ios-arm64_armv7",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "PhotoGroup--iOS--Info.plist";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "sync photos between users";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -555,13 +580,14 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.elder-gods.PhotoGroup";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.elder-gods.PhotoGroup0";
 				PRODUCT_NAME = PhotoGroup;
 				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "Shared/PhotoGroup (iOS)-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = "1,2,6";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;

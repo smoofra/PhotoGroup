@@ -19,7 +19,7 @@ func quote(_ s:String) -> String {
     }
 }
 
-func hexDigest(hash: SHA256) -> String {
+func hexDigest<T: HashFunction>(hash: T) -> String {
     return String(hash.finalize().flatMap { byte in
         String(format:"%02x", byte)
     })
