@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		464AE355289CBF4800DBA143 /* SwiftCSV.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 464AE354289CBF4800DBA143 /* SwiftCSV.framework */; };
+		464AE358289CBF8C00DBA143 /* SwiftCSV.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 464AE356289CBF8300DBA143 /* SwiftCSV.framework */; };
 		469EACBD289C53DD0067D063 /* hack.m in Sources */ = {isa = PBXBuildFile; fileRef = 469EACBC289C53DD0067D063 /* hack.m */; };
 		469EACBE289C53DD0067D063 /* hack.m in Sources */ = {isa = PBXBuildFile; fileRef = 469EACBC289C53DD0067D063 /* hack.m */; };
 		469EACBF289C53DD0067D063 /* hack.m in Sources */ = {isa = PBXBuildFile; fileRef = 469EACBC289C53DD0067D063 /* hack.m */; };
@@ -41,6 +43,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		464AE354289CBF4800DBA143 /* SwiftCSV.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftCSV.framework; path = "Carthage/Build/SwiftCSV.xcframework/macos-arm64_x86_64/SwiftCSV.framework"; sourceTree = "<group>"; };
+		464AE356289CBF8300DBA143 /* SwiftCSV.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftCSV.framework; path = "Carthage/Build/SwiftCSV.xcframework/ios-arm64_armv7/SwiftCSV.framework"; sourceTree = "<group>"; };
 		469EACB8289C53DD0067D063 /* PhotoGroup (iOS)-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PhotoGroup (iOS)-Bridging-Header.h"; sourceTree = "<group>"; };
 		469EACB9289C53DD0067D063 /* PhotoGroup (macOS)-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PhotoGroup (macOS)-Bridging-Header.h"; sourceTree = "<group>"; };
 		469EACBA289C53DD0067D063 /* Tests iOS-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Tests iOS-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -66,6 +70,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				464AE358289CBF8C00DBA143 /* SwiftCSV.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -73,6 +78,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				464AE355289CBF4800DBA143 /* SwiftCSV.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,6 +102,8 @@
 		46F0432C27D253FE0086F2E4 = {
 			isa = PBXGroup;
 			children = (
+				464AE354289CBF4800DBA143 /* SwiftCSV.framework */,
+				464AE356289CBF8300DBA143 /* SwiftCSV.framework */,
 				46F0433127D253FE0086F2E4 /* Shared */,
 				46F0434027D253FF0086F2E4 /* macOS */,
 				46F0434927D253FF0086F2E4 /* Tests iOS */,
@@ -492,6 +500,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 29AKDF837Q;
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Carthage/Build/SwiftCSV.xcframework/ios-arm64_armv7",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "sync photos between users";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -526,6 +538,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 29AKDF837Q;
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Carthage/Build/SwiftCSV.xcframework/ios-arm64_armv7",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "sync photos between users";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -561,6 +577,11 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Carthage/Build/SwiftCSV.xcframework/macos-arm64_x86_64",
+					"$(PROJECT_DIR)/Carthage/Build/SwiftCSV.xcframework/ios-arm64_armv7",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "sync photos between users";
@@ -591,6 +612,11 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/Carthage/Build/SwiftCSV.xcframework/macos-arm64_x86_64",
+					"$(PROJECT_DIR)/Carthage/Build/SwiftCSV.xcframework/ios-arm64_armv7",
+				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "sync photos between users";
