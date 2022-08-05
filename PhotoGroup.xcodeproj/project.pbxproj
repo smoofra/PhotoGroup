@@ -24,6 +24,7 @@
 		46F0435D27D253FF0086F2E4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46F0433327D253FE0086F2E4 /* ContentView.swift */; };
 		46F0435E27D253FF0086F2E4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 46F0433427D253FF0086F2E4 /* Assets.xcassets */; };
 		46F0435F27D253FF0086F2E4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 46F0433427D253FF0086F2E4 /* Assets.xcassets */; };
+		46F70528289D69A900B37C50 /* SwiftCSV.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 464AE354289CBF4800DBA143 /* SwiftCSV.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +52,16 @@
 			dstSubfolderSpec = 10;
 			files = (
 				46546A0D289D65FB00C66CD3 /* SwiftCSV.framework in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46F70527289D699900B37C50 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				46F70528289D69A900B37C50 /* SwiftCSV.framework in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,7 +138,6 @@
 				46F0434927D253FF0086F2E4 /* Tests iOS */,
 				46F0435527D253FF0086F2E4 /* Tests macOS */,
 				46F0433A27D253FF0086F2E4 /* Products */,
-				46546A07289D605700C66CD3 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -212,6 +222,7 @@
 				46F0433B27D253FF0086F2E4 /* Sources */,
 				46F0433C27D253FF0086F2E4 /* Frameworks */,
 				46F0433D27D253FF0086F2E4 /* Resources */,
+				46F70527289D699900B37C50 /* CopyFiles */,
 			);
 			buildRules = (
 			);
