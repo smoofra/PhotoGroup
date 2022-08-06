@@ -32,24 +32,6 @@ extension UInt8 {
         }
     }
 }
-
-//extension SHA256Digest {
-//    func fromHex(string : String) -> SHA256Digest? {
-//        let utf8 = string.utf8
-//        let data = UnsafeMutableRawBufferPointer.allocate(byteCount: SHA256.Digest.byteCount, alignment: 8)
-//            defer { data.deallocate() }
-//            if utf8.count != 2 * SHA256.byteCount { return nil }
-//            for i in stride(from: 0, to: 2*SHA256.byteCount, by: 2) {
-//                guard
-//                   let high = utf8[utf8.index(utf8.startIndex, offsetBy: i)].hexDigitValue,
-//                   let low = utf8[utf8.index(utf8.startIndex, offsetBy: i+1)].hexDigitValue
-//                else { return nil }
-//                data[i/2] = UInt8(high * 16 + low)
-//            }
-//            return data.bindMemory(to: SHA256.Digest.self)[0]
-//    }
-//}
-//
 extension Digest {
     static func fromHex(_ string : String) -> Self? {
         let utf8 = string.utf8
@@ -68,57 +50,6 @@ extension Digest {
 }
 
 
-
-//func dataDigest<T :HashFunction>(hash: T) -> Data {
-//    var d : Data
-//    hash.finalize().withUnsafeBytes { p in
-//        d = Data(bytes: p.baseAddress!, count: T.Digest.byteCount)
-//    }
-//    return d
-//}
-
-func toHex(hash: SHA256Digest) -> String {
-    return String(hash.flatMap { byte in
-        String(format:"%02x", byte)
-    })
-}
-
-struct Sha256 {
-    var data: (UInt64, UInt64, UInt64, UInt64)
-    
-    init(digest : SHA256Digest) {
-        var data = (UInt64(0), UInt64(0), UInt64(0), UInt64(0))
-        withUnsafeMutableBytes(of: &data) { to in
-            digest.withUnsafeBytes { from in
-                to.copyMemory(from: from)
-            }
-        }
-        self.data = data
-    }
-    
-    func hex() -> String {
-        String(withUnsafeBytes(of: self.data) { p in
-            p.flatMap { byte in
-                String(format:"%02x", byte)
-            }
-        })
-    }
-}
-
-
-
-
-//func parseDigest(s : String) -> SHA256Digest? {
-//    var digest: SHA256Digest
-//    digest.withUnsafeBytes { p in
-//        let address = UnsafeMutableRawPointer(mutating: p.baseAddress!)
-//        let bytes = address.bindMemory(to: UInt8.self, capacity: SHA256Digest.byteCount)
-//        for i in 0..<SHA256Digest.byteCount {
-//            bytes[i] = 42
-//        }
-//    }
-//    return digest
-//}
 
 func w_rename(old: String, new :String) throws -> ()  {
     let r = rename(NSString(string: old).utf8String, NSString(string: new).utf8String)
