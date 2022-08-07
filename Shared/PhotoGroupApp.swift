@@ -33,6 +33,13 @@ extension UInt8 {
     }
 }
 extension Digest {
+    
+    func toHex() -> String {
+        return String(self.flatMap { byte in
+            String(format:"%02x", byte)
+        })
+    }
+    
     static func fromHex(_ string : String) -> Self? {
         let utf8 = string.utf8
         let data = UnsafeMutableRawBufferPointer.allocate(byteCount: Self.byteCount, alignment: 8)
@@ -179,28 +186,31 @@ struct PhotoGroupApp: App {
         var asset_id : String?
         var asset: Asset?
         for row in csv.rows {
-            let id = try unwrap(row["id"])
-            if id != asset_id {
-                asset_id = id
-                asset = Asset(
-                    id: id,
-                    creationDate: try Date(try unwrap(row["creationDate"]), strategy: dateStyle),
-                    modificationDate: try Date(try unwrap(row["modificationDate"]), strategy: dateStyle),
-                    mediaType:  try unwrap(PHAssetMediaType(rawValue: try parseInt(try unwrap(row["mediaType"])))),
-                    mediaSubtypes: PHAssetMediaSubtype(rawValue:  try parseUInt(try unwrap(row["mediaSubtypes"]))),
-                    isFavorite: try unwrap(row["flags"]).contains("❤️"),
-                    resources: [Resource]())
-                assets[id] = asset
+            do {
+                let id = try unwrap(row["id"])
+                if id != asset_id {
+                    asset_id = id
+                    asset = Asset(
+                        id: id,
+                        creationDate: try Date(try unwrap(row["creationDate"]), strategy: dateStyle),
+                        modificationDate: try Date(try unwrap(row["modificationDate"]), strategy: dateStyle),
+                        mediaType:  try unwrap(PHAssetMediaType(rawValue: try parseInt(try unwrap(row["mediaType"])))),
+                        mediaSubtypes: PHAssetMediaSubtype(rawValue:  try parseUInt(try unwrap(row["mediaSubtypes"]))),
+                        isFavorite: try unwrap(row["flags"]).contains("❤️"),
+                        resources: [Resource]())
+                    assets[id] = asset
+                }
+                
+                assets[id]!.resources.append(Resource(
+                    url: try unwrap(row["url"]),
+                    size: UInt64(try unwrap(row["size"])),
+                    hash: SHA256Digest.fromHex(try unwrap(row["sha256"])),
+                    type: try unwrap(PHAssetResourceType(rawValue: try parseInt(try unwrap(row["resourceType"])))),
+                    filename: try unwrap(row["filename"]),
+                    uti: try unwrap(row["uti"])))
+            } catch {
+                print("bad row: ", row)
             }
-            
-            assets[id]!.resources.append(Resource(
-                url: try unwrap(row["url"]),
-                size: try unwrap (UInt64(try unwrap(row["size"]))),
-                hash: try unwrap (SHA256Digest.fromHex(try unwrap(row["sha256"]))),
-                type: try unwrap(PHAssetResourceType(rawValue: try parseInt(try unwrap(row["resourceType"])))),
-                filename: try unwrap(row["filename"]),
-                uti: try unwrap(row["uti"])))
-
         }
         
         return assets
@@ -208,7 +218,10 @@ struct PhotoGroupApp: App {
     
     func update(asset : inout Asset?, phasset : PHAsset) {
         
-        if let asset = asset,
+        let complete = asset?.resources.allSatisfy({ resource in resource.hash != nil && resource.size != nil }) ?? false
+
+        if complete,
+           let asset = asset,
            let asset_date = asset.modificationDate,
            let phasset_date = phasset.modificationDate,
            asset_date <= phasset_date
@@ -235,6 +248,8 @@ struct PhotoGroupApp: App {
                 var digest : SHA256Digest? = nil
                 var size : UInt64? = nil
                 if e != nil {
+                    print("hashing failed", e as Any)
+                } else {
                     digest = hash.finalize()
                     size = count
                 }
@@ -263,21 +278,70 @@ struct PhotoGroupApp: App {
         
         let fetchResult = Photos.PHAsset.fetchAssets(with: PHFetchOptions())
 
-        
+        let q = LimitQueue(limit: 8, qos: .userInitiated, label: "update")
+        let g = DispatchGroup()
         for i in 0..<fetchResult.count {
             let phasset : PHAsset = fetchResult.object(at: i)
-            self.update(asset: &assets[phasset.localIdentifier], phasset: phasset)
-            if i > 20 {
-                break
+            let id = phasset.localIdentifier
+            var asset = assets[id]
+            g.enter()
+            q.async(group: g, qos: .unspecified, flags: []) {
+                self.update(asset: &asset, phasset: phasset)
+                assets[id] = asset
+                g.leave()
             }
         }
+        g.wait()
         
         print("all done")
-
         
     }
     
-    func writeCSV(path:String) throws {
+    
+    func writeCSV(assets: [String:Asset], path:String) throws {
+        
+        let tmp_path = path + ".tmp"
+        print("writing csv to ", tmp_path)
+        FileManager.default.createFile(atPath: tmp_path, contents: Data(), attributes: nil)
+        guard let f = FileHandle(forWritingAtPath: tmp_path) else {
+            throw RuntimeError(message: "can't open csv file for writing")
+        }
+
+        f.write("id,creationDate,modificationDate,mediaType,mediaSubtypes,flags,resourceType,uti,filename,size,sha256,url\n".data(using: .utf8)!)
+        
+        for (_, asset) in assets {
+            for resource in asset.resources {
+                
+                let flags = asset.isFavorite ? "❤️" : ""
+                let fields = [
+                      asset.id,
+                      asset.creationDate?.ISO8601Format(dateStyle) ?? "",
+                      asset.modificationDate?.ISO8601Format(dateStyle) ?? "",
+                      String(asset.mediaType.rawValue),
+                      String(asset.mediaSubtypes.rawValue),
+                      flags,
+                      String(resource.type.rawValue),
+                      resource.uti,
+                      csvQuote(resource.filename),
+                      resource.size != nil ? String(resource.size!) : "",
+                      resource.hash?.toHex() ?? "",
+                      resource.url ?? "",
+                ]
+                let line = fields.joined(separator: ",")
+                f.write(line.data(using: .utf8)!)
+                f.write("\n".data(using: .utf8)!)
+                //print(line)
+            }
+        }
+        
+        try f.close()
+        print("moving to ", path)
+        try w_rename(old: tmp_path, new: path)
+        print("done writing csv")
+    }
+
+    
+    func writeCSV0(path:String) throws {
         
         let tmp_path = path + ".tmp"
         print("writing csv to ", tmp_path)
@@ -358,7 +422,7 @@ struct PhotoGroupApp: App {
             let assets_csv_path = try documentPath(filename: "assets.csv")
             var assets = try self.readCSV(path: assets_csv_path)
             try self.update(assets: &assets)
-            //try self.writeCSV(path: assets_csv_path)
+            try self.writeCSV(assets: assets, path: assets_csv_path)
         } catch let e as RuntimeError {
             print("oh noe", e)
         } catch let e {
