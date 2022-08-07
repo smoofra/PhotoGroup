@@ -103,7 +103,7 @@ func parseUInt(_ s : String) throws -> UInt {
 struct Resource {
     var url : String?
     var size : UInt64?
-    var hash : SHA256Digest
+    var hash : SHA256Digest?
     var type : PHAssetResourceType
     var filename: String
     var uti : String
@@ -111,14 +111,33 @@ struct Resource {
 
 struct Asset {
     var id : String
-    var creationDate: Date
-    var modificationDate: Date
+    var creationDate: Date?
+    var modificationDate: Date?
     var mediaType: PHAssetMediaType
     var mediaSubtypes: PHAssetMediaSubtype
     var isFavorite: Bool
     var resources: [Resource]
 }
 
+struct LimitQueue {
+    var sem : DispatchSemaphore
+    var q : DispatchQueue
+    
+    init(limit : Int, qos : DispatchQoS, label: String) {
+        self.sem = DispatchSemaphore(value: limit)
+        self.q = DispatchQueue(label: label, qos: qos, attributes: DispatchQueue.Attributes(), autoreleaseFrequency: DispatchQueue.AutoreleaseFrequency .inherit, target: nil)
+    }
+    
+    public func async(group: DispatchGroup? = nil, qos: DispatchQoS = .unspecified, flags: DispatchWorkItemFlags = [], execute work: @escaping @convention(block) () -> Void) {
+        self.q.async {
+            self.sem.wait()
+            DispatchQueue.global().async(group: group, qos: qos, flags: flags) {
+                work()
+                self.sem.signal()
+            }
+        }
+    }
+}
 
 
 @main
@@ -187,6 +206,77 @@ struct PhotoGroupApp: App {
         return assets
     }
     
+    func update(asset : inout Asset?, phasset : PHAsset) {
+        
+        if let asset = asset,
+           let asset_date = asset.modificationDate,
+           let phasset_date = phasset.modificationDate,
+           asset_date <= phasset_date
+        {
+            print("asset", phasset.localIdentifier, "is up to date")
+            return
+        }
+        
+        let phresources = PHAssetResource.assetResources(for: phasset)
+
+        var resources = Array<Resource?>(repeating: nil, count: phresources.count)
+        
+        let g = DispatchGroup()
+        for (i, phresource) in phresources.enumerated()  {
+            g.enter()
+            var count : UInt64 = 0
+            var hash = SHA256()
+            print("hashing ", phasset.localIdentifier, phresource.originalFilename)
+            PHAssetResourceManager.default().requestData(for: phresource, options: nil) { data in
+                count += UInt64(data.count)
+                hash.update(data: data)
+            } completionHandler: { e in
+                defer { g.leave() }
+                var digest : SHA256Digest? = nil
+                var size : UInt64? = nil
+                if e != nil {
+                    digest = hash.finalize()
+                    size = count
+                }
+                resources[i] = Resource(
+                    url: resource_fileURL(phresource)?.absoluteString,
+                    size : size,
+                    hash: digest,
+                    type: phresource.type,
+                    filename: phresource.originalFilename,
+                    uti: phresource.uniformTypeIdentifier)
+            }
+        }
+        g.wait()
+        
+        asset = Asset(id: phasset.localIdentifier,
+                      creationDate: phasset.creationDate,
+                      modificationDate: phasset.modificationDate,
+                      mediaType: phasset.mediaType,
+                      mediaSubtypes: phasset.mediaSubtypes,
+                      isFavorite: phasset.isFavorite,
+                      resources: resources.map({r in r!}))
+
+    }
+    
+    func update(assets : inout [String:Asset]) throws {
+        
+        let fetchResult = Photos.PHAsset.fetchAssets(with: PHFetchOptions())
+
+        
+        for i in 0..<fetchResult.count {
+            let phasset : PHAsset = fetchResult.object(at: i)
+            self.update(asset: &assets[phasset.localIdentifier], phasset: phasset)
+            if i > 20 {
+                break
+            }
+        }
+        
+        print("all done")
+
+        
+    }
+    
     func writeCSV(path:String) throws {
         
         let tmp_path = path + ".tmp"
@@ -242,7 +332,7 @@ struct PhotoGroupApp: App {
                 }
             }
             
-            if i > 10 {
+            if i > 20 {
                 break
             }
         }
@@ -266,8 +356,9 @@ struct PhotoGroupApp: App {
         print ("==got authorization.")
         do {
             let assets_csv_path = try documentPath(filename: "assets.csv")
-            try self.readCSV(path: assets_csv_path)
-            try self.writeCSV(path: assets_csv_path)
+            var assets = try self.readCSV(path: assets_csv_path)
+            try self.update(assets: &assets)
+            //try self.writeCSV(path: assets_csv_path)
         } catch let e as RuntimeError {
             print("oh noe", e)
         } catch let e {
