@@ -146,74 +146,123 @@ struct LimitQueue {
     }
 }
 
-
-@main
-struct PhotoGroupApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-    }
+func readCSV(path: String) throws -> [String: Asset] {
     
-    func documentPath(filename: String) throws -> String {
-        let documentsDirectories = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-        if documentsDirectories.count < 1 {
-            throw RuntimeError(message: "can't find Documents folder")
-        }
-        let documentsDirectory = documentsDirectories[0]
-        return documentsDirectory.appendingPathComponent(filename).path
-    }
+    var assets = [String:Asset]()
     
-    func readCSV(path: String) throws -> [String: Asset] {
-        
-        var assets = [String:Asset]()
-        
-        print("reading csv from", path)
+    print("reading csv from", path)
 
-        if !FileManager.default.fileExists(atPath: path) {
-            return assets
-        }
-        
-        let data = try String(contentsOf: URL.init(fileURLWithPath: path))
-        let csv = try NamedCSV(string: data, loadColumns: false)
-            
-        for k in ["modificationDate"] {
-            if !csv.header.contains(k) {
-                throw RuntimeError(message: "csv is incomplete")
-            }
-        }
-        
-        var asset_id : String?
-        var asset: Asset?
-        for row in csv.rows {
-            do {
-                let id = try unwrap(row["id"])
-                if id != asset_id {
-                    asset_id = id
-                    asset = Asset(
-                        id: id,
-                        creationDate: try Date(try unwrap(row["creationDate"]), strategy: dateStyle),
-                        modificationDate: try Date(try unwrap(row["modificationDate"]), strategy: dateStyle),
-                        mediaType:  try unwrap(PHAssetMediaType(rawValue: try parseInt(try unwrap(row["mediaType"])))),
-                        mediaSubtypes: PHAssetMediaSubtype(rawValue:  try parseUInt(try unwrap(row["mediaSubtypes"]))),
-                        isFavorite: try unwrap(row["flags"]).contains("❤️"),
-                        resources: [Resource]())
-                    assets[id] = asset
-                }
-                
-                assets[id]!.resources.append(Resource(
-                    url: try unwrap(row["url"]),
-                    size: UInt64(try unwrap(row["size"])),
-                    hash: SHA256Digest.fromHex(try unwrap(row["sha256"])),
-                    type: try unwrap(PHAssetResourceType(rawValue: try parseInt(try unwrap(row["resourceType"])))),
-                    filename: try unwrap(row["filename"]),
-                    uti: try unwrap(row["uti"])))
-            } catch {
-                print("bad row: ", row)
-            }
-        }
-        
+    if !FileManager.default.fileExists(atPath: path) {
         return assets
+    }
+    
+    let data = try String(contentsOf: URL.init(fileURLWithPath: path))
+    let csv = try NamedCSV(string: data, loadColumns: false)
+        
+    for k in ["modificationDate"] {
+        if !csv.header.contains(k) {
+            throw RuntimeError(message: "csv is incomplete")
+        }
+    }
+    
+    var asset_id : String?
+    var asset: Asset?
+    for row in csv.rows {
+        do {
+            let id = try unwrap(row["id"])
+            if id != asset_id {
+                asset_id = id
+                asset = Asset(
+                    id: id,
+                    creationDate: try Date(try unwrap(row["creationDate"]), strategy: dateStyle),
+                    modificationDate: try Date(try unwrap(row["modificationDate"]), strategy: dateStyle),
+                    mediaType:  try unwrap(PHAssetMediaType(rawValue: try parseInt(try unwrap(row["mediaType"])))),
+                    mediaSubtypes: PHAssetMediaSubtype(rawValue:  try parseUInt(try unwrap(row["mediaSubtypes"]))),
+                    isFavorite: try unwrap(row["flags"]).contains("❤️"),
+                    resources: [Resource]())
+                assets[id] = asset
+            }
+            
+            assets[id]!.resources.append(Resource(
+                url: try unwrap(row["url"]),
+                size: UInt64(try unwrap(row["size"])),
+                hash: SHA256Digest.fromHex(try unwrap(row["sha256"])),
+                type: try unwrap(PHAssetResourceType(rawValue: try parseInt(try unwrap(row["resourceType"])))),
+                filename: try unwrap(row["filename"]),
+                uti: try unwrap(row["uti"])))
+        } catch {
+            print("bad row: ", row)
+        }
+    }
+    
+    return assets
+}
+
+
+func writeCSV(assets: [String:Asset], path:String) throws {
+    
+    let tmp_path = path + ".tmp"
+    print("writing csv to ", tmp_path)
+    FileManager.default.createFile(atPath: tmp_path, contents: Data(), attributes: nil)
+    guard let f = FileHandle(forWritingAtPath: tmp_path) else {
+        throw RuntimeError(message: "can't open csv file for writing")
+    }
+
+    f.write("id,creationDate,modificationDate,mediaType,mediaSubtypes,flags,resourceType,uti,filename,size,sha256,url\n".data(using: .utf8)!)
+    
+    for (_, asset) in assets {
+        for resource in asset.resources {
+            
+            let flags = asset.isFavorite ? "❤️" : ""
+            let fields = [
+                  asset.id,
+                  asset.creationDate?.ISO8601Format(dateStyle) ?? "",
+                  asset.modificationDate?.ISO8601Format(dateStyle) ?? "",
+                  String(asset.mediaType.rawValue),
+                  String(asset.mediaSubtypes.rawValue),
+                  flags,
+                  String(resource.type.rawValue),
+                  resource.uti,
+                  csvQuote(resource.filename),
+                  resource.size != nil ? String(resource.size!) : "",
+                  resource.hash?.toHex() ?? "",
+                  resource.url ?? "",
+            ]
+            let line = fields.joined(separator: ",")
+            f.write(line.data(using: .utf8)!)
+            f.write("\n".data(using: .utf8)!)
+            //print(line)
+        }
+    }
+    
+    try f.close()
+    print("moving to ", path)
+    try w_rename(old: tmp_path, new: path)
+    print("done writing csv")
+}
+
+
+func documentPath(filename: String) throws -> String {
+    let documentsDirectories = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+    if documentsDirectories.count < 1 {
+        throw RuntimeError(message: "can't find Documents folder")
+    }
+    let documentsDirectory = documentsDirectories[0]
+    return documentsDirectory.appendingPathComponent(filename).path
+}
+
+
+class Updater {
+    
+    var q : DispatchQueue
+    var hashq : LimitQueue
+    var assets : [String:Asset]
+    var updating : Bool = false
+        
+    init() {
+        self.q = DispatchQueue(label: "update", qos: .userInitiated, attributes: [], autoreleaseFrequency: .inherit, target: nil)
+        self.hashq = LimitQueue(limit: 8, qos: .userInitiated, label: "hash")
+        self.assets = [:]
     }
     
     func update(asset : inout Asset?, phasset : PHAsset) {
@@ -274,155 +323,42 @@ struct PhotoGroupApp: App {
 
     }
     
-    func update(assets : inout [String:Asset]) throws {
-        
-        let fetchResult = Photos.PHAsset.fetchAssets(with: PHFetchOptions())
-
-        let q = LimitQueue(limit: 8, qos: .userInitiated, label: "update")
+    func update() {
         let g = DispatchGroup()
-        for i in 0..<fetchResult.count {
-            let phasset : PHAsset = fetchResult.object(at: i)
-            let id = phasset.localIdentifier
-            var asset = assets[id]
-            g.enter()
-            q.async(group: g, qos: .unspecified, flags: []) {
-                self.update(asset: &asset, phasset: phasset)
-                assets[id] = asset
-                g.leave()
+        self.q.sync {
+            if self.updating {
+                print("already updating")
+                return
             }
-        }
-        g.wait()
-        
-        print("all done")
-        
-    }
-    
-    
-    func writeCSV(assets: [String:Asset], path:String) throws {
-        
-        let tmp_path = path + ".tmp"
-        print("writing csv to ", tmp_path)
-        FileManager.default.createFile(atPath: tmp_path, contents: Data(), attributes: nil)
-        guard let f = FileHandle(forWritingAtPath: tmp_path) else {
-            throw RuntimeError(message: "can't open csv file for writing")
-        }
-
-        f.write("id,creationDate,modificationDate,mediaType,mediaSubtypes,flags,resourceType,uti,filename,size,sha256,url\n".data(using: .utf8)!)
-        
-        for (_, asset) in assets {
-            for resource in asset.resources {
-                
-                let flags = asset.isFavorite ? "❤️" : ""
-                let fields = [
-                      asset.id,
-                      asset.creationDate?.ISO8601Format(dateStyle) ?? "",
-                      asset.modificationDate?.ISO8601Format(dateStyle) ?? "",
-                      String(asset.mediaType.rawValue),
-                      String(asset.mediaSubtypes.rawValue),
-                      flags,
-                      String(resource.type.rawValue),
-                      resource.uti,
-                      csvQuote(resource.filename),
-                      resource.size != nil ? String(resource.size!) : "",
-                      resource.hash?.toHex() ?? "",
-                      resource.url ?? "",
-                ]
-                let line = fields.joined(separator: ",")
-                f.write(line.data(using: .utf8)!)
-                f.write("\n".data(using: .utf8)!)
-                //print(line)
-            }
-        }
-        
-        try f.close()
-        print("moving to ", path)
-        try w_rename(old: tmp_path, new: path)
-        print("done writing csv")
-    }
-
-    
-    func writeCSV0(path:String) throws {
-        
-        let tmp_path = path + ".tmp"
-        print("writing csv to ", tmp_path)
-        FileManager.default.createFile(atPath: tmp_path, contents: Data(), attributes: nil)
-        guard let f = FileHandle(forWritingAtPath: tmp_path) else {
-            throw RuntimeError(message: "can't open csv file for writing")
-        }
-
-        f.write("id,creationDate,modificationDate,mediaType,mediaSubtypes,flags,resourceType,uti,filename,size,sha256,url\n".data(using: .utf8)!)
-
-        let fetchResult = Photos.PHAsset.fetchAssets(with: PHFetchOptions())
-
-        let g = DispatchGroup()
-        
-        for i in 0..<fetchResult.count {
-            let asset : PHAsset = fetchResult.object(at: i)
-            //print("LOL", asset, asset.localIdentifier)
-            
-            if asset.mediaType != .image {
-                continue
-            }
-            
-            for resource in PHAssetResource.assetResources(for: asset) {
+            self.updating = true
+            let fetchResult = Photos.PHAsset.fetchAssets(with: PHFetchOptions())
+            for i in 0..<fetchResult.count {
+                let phasset : PHAsset = fetchResult.object(at: i)
+                let id = phasset.localIdentifier
+                var asset = self.assets[id]
                 g.enter()
-                var count = 0
-                var hash = SHA256()
-                PHAssetResourceManager.default().requestData(for: resource, options: nil) { data in
-                    count += data.count
-                    hash.update(data: data)
-                } completionHandler: { e in
-                    let flags = asset.isFavorite ? "❤️" : ""
-                    let fields = [
-                          asset.localIdentifier,
-                          asset.creationDate?.ISO8601Format(dateStyle) ?? "",
-                          asset.modificationDate?.ISO8601Format(dateStyle) ?? "",
-                          String(asset.mediaType.rawValue),
-                          String(asset.mediaSubtypes.rawValue),
-                          flags,
-                          String(resource.type.rawValue),
-                          resource.uniformTypeIdentifier,
-                          csvQuote(resource.originalFilename),
-                          String(count),
-                          e == nil ?  hexDigest(hash: hash) : "",
-                          csvQuote(resource_fileURL(resource)?.absoluteString ?? "")
-                    ]
-                    let line = fields.joined(separator: ",")
-
-                    f.write(line.data(using: .utf8)!)
-                    f.write("\n".data(using: .utf8)!)
-                    print(line)
-                    g.leave()
+                self.hashq.async(group: g, qos: .unspecified, flags: []) {
+                    self.update(asset: &asset, phasset: phasset)
+                    self.q.async {
+                        self.assets[id] = asset
+                        g.leave()
+                    }
                 }
             }
-            
-            if i > 20 {
-                break
-            }
         }
-
         g.wait()
-        
-        try f.close()
-        print("moving to ", path)
-        try w_rename(old: tmp_path, new: path)
-        
-        print("done writing csv")
-        
-
-    }
-
-    func gotAuthorization(_ status:PHAuthorizationStatus) {
-        if status != .authorized {
-            print("==not authorized :(")
-            return
+        self.q.sync {
+            print("all done")
+            self.updating = false
         }
-        print ("==got authorization.")
+    }
+    
+    func lol() {
         do {
             let assets_csv_path = try documentPath(filename: "assets.csv")
-            var assets = try self.readCSV(path: assets_csv_path)
-            try self.update(assets: &assets)
-            try self.writeCSV(assets: assets, path: assets_csv_path)
+            self.assets = try readCSV(path: assets_csv_path)
+            self.update()
+            try writeCSV(assets: self.assets, path: assets_csv_path)
         } catch let e as RuntimeError {
             print("oh noe", e)
         } catch let e {
@@ -430,7 +366,30 @@ struct PhotoGroupApp: App {
         }
     }
     
+}
+
+@main
+struct PhotoGroupApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
+    
+    var updater : Updater
+
+
+    func gotAuthorization(_ status:PHAuthorizationStatus) {
+        if status != .authorized {
+            print("==not authorized :(")
+            return
+        }
+        print ("==got authorization.")
+        updater.lol()
+    }
+    
     init() {
+        self.updater = Updater()
         print("==requesting authorization.....")
         Photos.PHPhotoLibrary.requestAuthorization(for: .readWrite, handler:self.gotAuthorization)
         
