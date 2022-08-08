@@ -251,21 +251,76 @@ func documentPath(filename: String) throws -> String {
     return documentsDirectory.appendingPathComponent(filename).path
 }
 
-
-class Updater {
+class AsyncSemaphore {
+    var value : Int
     
-    var q : DispatchQueue
-    var hashq : LimitQueue
+    class Waiter {
+        var continuation: CheckedContinuation<Void, Never>
+        var next : Waiter?
+        init(continuation: CheckedContinuation<Void, Never>, next: Waiter?) {
+            self.continuation = continuation
+            self.next = next
+        }
+    }
+    var waitList : Waiter?
+    
+    init(value: Int) {
+        self.value = value
+    }
+    
+    func wait() async {
+        if self.value > 0 {
+            self.value -= 1
+            return
+        }
+        let _ : Void = await withCheckedContinuation({ k in
+            let w = Waiter(continuation: k, next:self.waitList)
+            self.waitList = w
+        })
+        self.value -= 1
+    }
+    
+    func signal() {
+        self.value += 1
+        if let w = self.waitList {
+            self.waitList = w.next
+            w.continuation.resume()
+        }
+    }
+}
+
+
+
+func getHash(phresource : PHAssetResource) async throws -> (UInt64, SHA256Digest) {
+    return try await withCheckedThrowingContinuation { continuation in
+        var count : UInt64 = 0
+        var hash = SHA256()
+        PHAssetResourceManager.default().requestData(for: phresource, options: nil) { data in
+            count += UInt64(data.count)
+            hash.update(data: data)
+        } completionHandler: { e in
+            if let e = e {
+                continuation.resume(throwing: e)
+            } else {
+                continuation.resume(returning: (count, hash.finalize()))
+            }
+        }
+    }
+}
+
+
+actor Cache {
+    
     var assets : [String:Asset]
-    var updating : Bool = false
+    var updateTask : Task<Void,Never>?
+    var csv_path : String?
+    var limit = AsyncSemaphore(value: 32)
         
     init() {
-        self.q = DispatchQueue(label: "update", qos: .userInitiated, attributes: [], autoreleaseFrequency: .inherit, target: nil)
-        self.hashq = LimitQueue(limit: 8, qos: .userInitiated, label: "hash")
         self.assets = [:]
     }
     
-    func update(asset : inout Asset?, phasset : PHAsset) {
+    func update(asset : inout Asset?, phasset : PHAsset) async {
         
         let complete = asset?.resources.allSatisfy({ resource in resource.hash != nil && resource.size != nil }) ?? false
 
@@ -275,7 +330,7 @@ class Updater {
            let phasset_date = phasset.modificationDate,
            asset_date <= phasset_date
         {
-            print("asset", phasset.localIdentifier, "is up to date")
+            //print("asset", phasset.localIdentifier, "is up to date")
             return
         }
         
@@ -283,35 +338,28 @@ class Updater {
 
         var resources = Array<Resource?>(repeating: nil, count: phresources.count)
         
-        let g = DispatchGroup()
+        
         for (i, phresource) in phresources.enumerated()  {
-            g.enter()
-            var count : UInt64 = 0
-            var hash = SHA256()
             print("hashing ", phasset.localIdentifier, phresource.originalFilename)
-            PHAssetResourceManager.default().requestData(for: phresource, options: nil) { data in
-                count += UInt64(data.count)
-                hash.update(data: data)
-            } completionHandler: { e in
-                defer { g.leave() }
-                var digest : SHA256Digest? = nil
-                var size : UInt64? = nil
-                if e != nil {
-                    print("hashing failed", e as Any)
-                } else {
-                    digest = hash.finalize()
-                    size = count
-                }
-                resources[i] = Resource(
-                    url: resource_fileURL(phresource)?.absoluteString,
-                    size : size,
-                    hash: digest,
-                    type: phresource.type,
-                    filename: phresource.originalFilename,
-                    uti: phresource.uniformTypeIdentifier)
+            
+            var size : UInt64?
+            var hash : SHA256Digest?
+            do {
+                (size, hash) = try await getHash(phresource: phresource)
+            } catch let e {
+                print("hashing failed", e)
             }
+            
+            resources[i] = Resource(
+                url: resource_fileURL(phresource)?.absoluteString,
+                size : size,
+                hash: hash,
+                type: phresource.type,
+                filename: phresource.originalFilename,
+                uti: phresource.uniformTypeIdentifier)
+
         }
-        g.wait()
+
         
         asset = Asset(id: phasset.localIdentifier,
                       creationDate: phasset.creationDate,
@@ -323,49 +371,53 @@ class Updater {
 
     }
     
-    func update() {
-        let g = DispatchGroup()
-        self.q.sync {
-            if self.updating {
-                print("already updating")
-                return
-            }
-            self.updating = true
-            let fetchResult = Photos.PHAsset.fetchAssets(with: PHFetchOptions())
+    func update(phasset : PHAsset) async {
+        await limit.wait()
+        defer { limit.signal() }
+        let id = phasset.localIdentifier
+        var asset = assets[id]
+        await self.update(asset: &asset, phasset: phasset)
+        self.assets[id] = asset
+    }
+    
+    func update() async throws {
+        defer { self.updateTask = nil }
+        
+        if self.csv_path == nil {
+            self.csv_path  = try documentPath(filename: "assets.csv")
+            self.assets = try readCSV(path: self.csv_path!)
+        }
+        
+        let fetchResult = Photos.PHAsset.fetchAssets(with: PHFetchOptions())        ///
+
+        await withTaskGroup(of: Void.self) { g in
             for i in 0..<fetchResult.count {
-                let phasset : PHAsset = fetchResult.object(at: i)
-                let id = phasset.localIdentifier
-                var asset = self.assets[id]
-                g.enter()
-                self.hashq.async(group: g, qos: .unspecified, flags: []) {
-                    self.update(asset: &asset, phasset: phasset)
-                    self.q.async {
-                        self.assets[id] = asset
-                        g.leave()
-                    }
+                g.addTask {
+                    await self.update(phasset: fetchResult.object(at: i))
                 }
             }
         }
-        g.wait()
-        self.q.sync {
-            print("all done")
-            self.updating = false
+
+        try writeCSV(assets: self.assets, path: csv_path!)
+
+        print("update complete.")
+        
+    }
+    
+    func startUpdating() {
+        if self.updateTask != nil {
+            return
+        }
+        self.updateTask = Task {
+            do {
+                try await self.update()
+            } catch let e {
+                print("error updating:", e)
+            }
         }
     }
     
-    func lol() {
-        do {
-            let assets_csv_path = try documentPath(filename: "assets.csv")
-            self.assets = try readCSV(path: assets_csv_path)
-            self.update()
-            try writeCSV(assets: self.assets, path: assets_csv_path)
-        } catch let e as RuntimeError {
-            print("oh noe", e)
-        } catch let e {
-            print("oh no!", e)
-        }
-    }
-    
+
 }
 
 @main
@@ -376,7 +428,7 @@ struct PhotoGroupApp: App {
         }
     }
     
-    var updater : Updater
+    var updater : Cache
 
 
     func gotAuthorization(_ status:PHAuthorizationStatus) {
@@ -385,11 +437,11 @@ struct PhotoGroupApp: App {
             return
         }
         print ("==got authorization.")
-        updater.lol()
+        Task { await updater.startUpdating() }
     }
     
     init() {
-        self.updater = Updater()
+        self.updater = Cache()
         print("==requesting authorization.....")
         Photos.PHPhotoLibrary.requestAuthorization(for: .readWrite, handler:self.gotAuthorization)
         
