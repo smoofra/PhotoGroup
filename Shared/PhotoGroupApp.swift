@@ -121,6 +121,16 @@ struct Album {
     var assetIds: Set<String>
 }
 
+func csvSplit(s : String) throws -> [String] {
+    let csv = try EnumeratedCSV(string: "\n" + s, loadColumns: false)
+    if csv.rows.count == 0 {
+        return []
+    }
+    if csv.rows.count != 1 {
+        throw RuntimeError(message: "parse error")
+    }
+    return csv.rows[0]
+}
 
 func readAssetsCSV(path: String) throws -> [String: Asset] {
     
@@ -141,6 +151,9 @@ func readAssetsCSV(path: String) throws -> [String: Asset] {
         
         let id = try unwrap(row["id"])
         if id != asset_id {
+            let albums = try csvSplit(s: try unwrap(row["albums"]))
+            let albumIds = try csvSplit(s: try unwrap(row["albumIds"]))
+            
             asset_id = id
             asset = Asset(
                 id: id,
@@ -189,8 +202,8 @@ func writeAssetsCSV(assets: [String:Asset], albums: [String:Album], path:String)
             }
         }
 
-        let albumIds = albums.map { (id,name) in id }.joined(separator: " ")
-        let albumsNames = albums.compactMap { (id,name) in name }.joined(separator: "; ")
+        let albumIds = albums.map { (id,name) in csvQuote(id) }.joined(separator: " ")
+        let albumsNames = albums.compactMap { (id,name) in name }.map(csvQuote).joined(separator: "; ")
         let flags = asset.isFavorite ? "❤️" : ""
         
         for resource in asset.resources {
