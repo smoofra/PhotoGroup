@@ -18,20 +18,6 @@ func csvQuote(_ s:String) -> String {
     }
 }
 
-func hexDigest<T: HashFunction>(hash: T) -> String {
-    return String(hash.finalize().flatMap { byte in
-        String(format:"%02x", byte)
-    })
-}
-
-extension UInt8 {
-    var hexDigitValue : Int? {
-        get {
-            return Character(UnicodeScalar(self)).hexDigitValue
-            
-        }
-    }
-}
 extension Digest {
     
     func toHex() -> String {
@@ -41,14 +27,18 @@ extension Digest {
     }
     
     static func fromHex(_ string : String) -> Self? {
-        let utf8 = string.utf8
         let data = UnsafeMutableRawBufferPointer.allocate(byteCount: Self.byteCount, alignment: 8)
         defer { data.deallocate() }
+        let utf8 = string.utf8
         if utf8.count != 2 * Self.byteCount { return nil }
+        func digit(_ i : Int) -> Int? {
+            let byte = utf8[utf8.index(utf8.startIndex, offsetBy: i)]
+            return Character(UnicodeScalar(byte)).hexDigitValue
+        }
         for i in stride(from: 0, to: 2*Self.byteCount, by: 2) {
             guard
-               let high = utf8[utf8.index(utf8.startIndex, offsetBy: i)].hexDigitValue,
-               let low = utf8[utf8.index(utf8.startIndex, offsetBy: i+1)].hexDigitValue
+                let high = digit(i),
+                let low = digit(i+1)
             else { return nil }
             data[i/2] = UInt8(high * 16 + low)
         }
