@@ -248,40 +248,45 @@ func documentPath(filename: String) throws -> String {
 }
 
 class AsyncSemaphore {
-    var value : Int
     
-    class Waiter {
-        var continuation: CheckedContinuation<Void, Never>
-        var next : Waiter?
-        init(continuation: CheckedContinuation<Void, Never>, next: Waiter?) {
-            self.continuation = continuation
-            self.next = next
-        }
+    struct waiter {
+        var continuation: CheckedContinuation<Void,Never>
+        var next: UnsafeMutablePointer<waiter>?
     }
-    var waitList : Waiter?
+
+    var value : Int
+    var waitList : UnsafeMutablePointer<waiter>?
+    var lock = os_unfair_lock()
     
     init(value: Int) {
         self.value = value
     }
     
     func wait() async {
+        os_unfair_lock_lock(&self.lock)
         if self.value > 0 {
             self.value -= 1
-            return
+            os_unfair_lock_unlock(&self.lock)
+        } else {
+            let w = UnsafeMutablePointer<waiter>.allocate(capacity: 1)
+            let _ : Void = await withCheckedContinuation({ k in
+                w.initialize(to: waiter(continuation: k, next: self.waitList))
+                self.waitList = w
+                os_unfair_lock_unlock(&self.lock)
+            })
+            w.deallocate()
         }
-        let _ : Void = await withCheckedContinuation({ k in
-            let w = Waiter(continuation: k, next:self.waitList)
-            self.waitList = w
-        })
-        self.value -= 1
     }
     
     func signal() {
-        self.value += 1
+        os_unfair_lock_lock(&self.lock)
         if let w = self.waitList {
-            self.waitList = w.next
-            w.continuation.resume()
+            self.waitList = w.pointee.next
+            w.pointee.continuation.resume()
+        } else {
+            self.value += 1
         }
+        os_unfair_lock_unlock(&self.lock)
     }
 }
 
