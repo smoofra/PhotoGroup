@@ -46,7 +46,18 @@ extension Digest {
     }
 }
 
-
+extension PHAssetResource {
+    var path : String? {
+        get {
+            guard let url = resource_fileURL(self)
+            else { return nil}
+            if !url.isFileURL {
+                return nil
+            }
+            return url.path
+        }
+    }
+}
 
 func w_rename(old: String, new :String) throws -> ()  {
     let r = rename(NSString(string: old).utf8String, NSString(string: new).utf8String)
@@ -98,7 +109,7 @@ func parseUInt(_ s : String) throws -> UInt {
 
 
 struct Resource {
-    var url : String?
+    var path : String?
     var size : UInt64?
     var hash : SHA256Digest?
     var type : PHAssetResourceType
@@ -168,7 +179,7 @@ func readAssetsCSV(path: String) throws -> [String: Asset] {
         }
         
         assets[id]!.resources.append(Resource(
-            url: try unwrap(row["url"]),
+            path: row["path"],
             size: UInt64(try unwrap(row["size"])),
             hash: SHA256Digest.fromHex(try unwrap(row["sha256"])),
             type: try unwrap(PHAssetResourceType(rawValue: try parseInt(try unwrap(row["resourceType"])))),
@@ -190,7 +201,7 @@ func writeAssetsCSV(assets: [String:Asset], albums: [String:Album], path:String)
         throw RuntimeError(message: "can't open csv file for writing")
     }
 
-    f.write("id,creationDate,modificationDate,mediaType,mediaSubtypes,flags,resourceType,uti,filename,size,sha256,albums,albumIds,url\n".data(using: .utf8)!)
+    f.write("id,creationDate,modificationDate,mediaType,mediaSubtypes,flags,resourceType,uti,filename,size,sha256,albums,albumIds,path\n".data(using: .utf8)!)
     
     for (_, asset) in assets {
         
@@ -222,7 +233,7 @@ func writeAssetsCSV(assets: [String:Asset], albums: [String:Album], path:String)
                   resource.hash?.toHex() ?? "",
                   csvQuote(albumsNames),
                   csvQuote(albumIds),
-                  resource.url ?? "",
+                  resource.path ?? "",
             ]
             let line = fields.joined(separator: ",")
             f.write(line.data(using: .utf8)!)
@@ -354,7 +365,7 @@ actor Cache {
             }
             
             resources[i] = Resource(
-                url: resource_fileURL(phresource)?.absoluteString,
+                path: phresource.path,
                 size : size,
                 hash: hash,
                 type: phresource.type,
