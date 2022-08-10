@@ -59,6 +59,17 @@ extension PHAssetResource {
     }
 }
 
+extension PHCloudIdentifier {
+    static func maybe(_ s: String?) -> PHCloudIdentifier? {
+        if let s = s {
+            if s != "" {
+                return PHCloudIdentifier(stringValue: s)
+            }
+        }
+        return nil
+    }
+}
+
 func w_rename(old: String, new :String) throws -> ()  {
     let r = rename(NSString(string: old).utf8String, NSString(string: new).utf8String)
     if r < 0 {
@@ -119,6 +130,7 @@ struct Resource {
 
 struct Asset {
     var id : String
+    var cloudid : PHCloudIdentifier?
     var creationDate: Date?
     var modificationDate: Date?
     var mediaType: PHAssetMediaType
@@ -168,6 +180,7 @@ func readAssetsCSV(path: String) throws -> [String: Asset] {
             asset_id = id
             asset = Asset(
                 id: id,
+                cloudid: PHCloudIdentifier.maybe(row["cloudId"]),
                 creationDate: try Date(try unwrap(row["creationDate"]), strategy: dateStyle),
                 modificationDate: try Date(try unwrap(row["modificationDate"]), strategy: dateStyle),
                 mediaType:  try unwrap(PHAssetMediaType(rawValue: try parseInt(try unwrap(row["mediaType"])))),
@@ -201,7 +214,7 @@ func writeAssetsCSV(assets: [String:Asset], albums: [String:Album], path:String)
         throw RuntimeError(message: "can't open csv file for writing")
     }
 
-    f.write("id,creationDate,modificationDate,mediaType,mediaSubtypes,flags,resourceType,uti,filename,size,sha256,albums,albumIds,path\n".data(using: .utf8)!)
+    f.write("id,cloudId,creationDate,modificationDate,mediaType,mediaSubtypes,flags,resourceType,uti,filename,size,sha256,albums,albumIds,path\n".data(using: .utf8)!)
     
     for (_, asset) in assets {
         
@@ -220,7 +233,8 @@ func writeAssetsCSV(assets: [String:Asset], albums: [String:Album], path:String)
         for resource in asset.resources {
 
             let fields = [
-                  asset.id,
+                  csvQuote(asset.id),
+                  csvQuote(asset.cloudid?.stringValue ?? ""),
                   asset.creationDate?.ISO8601Format(dateStyle) ?? "",
                   asset.modificationDate?.ISO8601Format(dateStyle) ?? "",
                   String(asset.mediaType.rawValue),
@@ -419,6 +433,26 @@ actor Cache {
                 }
             }
         }
+        
+        let needsIds : [String] = self.assets.compactMap { id, asset in
+            if asset.cloudid == nil {
+                return id
+            } else {
+                return nil
+            }
+        }
+        let cloudIds = PHPhotoLibrary.shared().cloudIdentifierMappings(forLocalIdentifiers: needsIds)
+        for (id, result) in cloudIds {
+            switch result {
+            case .failure(let e):
+                print("failed to get cloud id for \(id): \(e)")
+            case.success(let cloudid):
+                print("\(id) -> cloud: \(cloudid)")
+                self.assets[id]!.cloudid = cloudid
+            }
+        }
+
+
 
         try writeAssetsCSV(assets: self.assets, albums: self.albums, path: csv_path!)
     }
@@ -487,9 +521,9 @@ struct PhotoGroupApp: App {
         }
         print ("==got authorization.")
 
-        // Task { await updater.startUpdating() }
+        Task { await updater.startUpdating() }
         
-        createAsset()
+        //createAsset()
 
     }
         
