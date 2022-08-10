@@ -7,9 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		464AE355289CBF4800DBA143 /* SwiftCSV.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 464AE354289CBF4800DBA143 /* SwiftCSV.framework */; };
-		464AE358289CBF8C00DBA143 /* SwiftCSV.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 464AE356289CBF8300DBA143 /* SwiftCSV.framework */; };
-		46546A0D289D65FB00C66CD3 /* SwiftCSV.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 464AE356289CBF8300DBA143 /* SwiftCSV.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		4632828A28A4239F007CD79C /* SwiftCSV.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4632828928A4239F007CD79C /* SwiftCSV.xcframework */; };
+		4632828B28A4239F007CD79C /* SwiftCSV.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4632828928A4239F007CD79C /* SwiftCSV.xcframework */; };
+		4632828C28A4239F007CD79C /* SwiftCSV.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4632828928A4239F007CD79C /* SwiftCSV.xcframework */; };
+		4632828D28A4239F007CD79C /* SwiftCSV.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4632828928A4239F007CD79C /* SwiftCSV.xcframework */; };
 		469EACBD289C53DD0067D063 /* hack.m in Sources */ = {isa = PBXBuildFile; fileRef = 469EACBC289C53DD0067D063 /* hack.m */; };
 		469EACBE289C53DD0067D063 /* hack.m in Sources */ = {isa = PBXBuildFile; fileRef = 469EACBC289C53DD0067D063 /* hack.m */; };
 		469EACBF289C53DD0067D063 /* hack.m in Sources */ = {isa = PBXBuildFile; fileRef = 469EACBC289C53DD0067D063 /* hack.m */; };
@@ -24,7 +25,6 @@
 		46F0435D27D253FF0086F2E4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46F0433327D253FE0086F2E4 /* ContentView.swift */; };
 		46F0435E27D253FF0086F2E4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 46F0433427D253FF0086F2E4 /* Assets.xcassets */; };
 		46F0435F27D253FF0086F2E4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 46F0433427D253FF0086F2E4 /* Assets.xcassets */; };
-		46F70528289D69A900B37C50 /* SwiftCSV.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 464AE354289CBF4800DBA143 /* SwiftCSV.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,7 +51,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				46546A0D289D65FB00C66CD3 /* SwiftCSV.framework in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -61,15 +60,13 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				46F70528289D69A900B37C50 /* SwiftCSV.framework in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		464AE354289CBF4800DBA143 /* SwiftCSV.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftCSV.framework; path = "Carthage/Build/SwiftCSV.xcframework/macos-arm64_x86_64/SwiftCSV.framework"; sourceTree = "<group>"; };
-		464AE356289CBF8300DBA143 /* SwiftCSV.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftCSV.framework; path = "Carthage/Build/SwiftCSV.xcframework/ios-arm64_armv7/SwiftCSV.framework"; sourceTree = "<group>"; };
+		4632828928A4239F007CD79C /* SwiftCSV.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = SwiftCSV.xcframework; path = Carthage/Build/SwiftCSV.xcframework; sourceTree = "<group>"; };
 		46546A06289D605700C66CD3 /* PhotoGroup (iOS).entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "PhotoGroup (iOS).entitlements"; sourceTree = "<group>"; };
 		46546A0A289D606200C66CD3 /* PhotoGroup--iOS--Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "PhotoGroup--iOS--Info.plist"; sourceTree = "<group>"; };
 		469EACB8289C53DD0067D063 /* PhotoGroup (iOS)-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PhotoGroup (iOS)-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -97,7 +94,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				464AE358289CBF8C00DBA143 /* SwiftCSV.framework in Frameworks */,
+				4632828A28A4239F007CD79C /* SwiftCSV.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -105,7 +102,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				464AE355289CBF4800DBA143 /* SwiftCSV.framework in Frameworks */,
+				4632828B28A4239F007CD79C /* SwiftCSV.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -113,6 +110,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4632828C28A4239F007CD79C /* SwiftCSV.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -120,6 +118,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4632828D28A4239F007CD79C /* SwiftCSV.xcframework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -129,10 +128,9 @@
 		46F0432C27D253FE0086F2E4 = {
 			isa = PBXGroup;
 			children = (
+				4632828928A4239F007CD79C /* SwiftCSV.xcframework */,
 				46546A0A289D606200C66CD3 /* PhotoGroup--iOS--Info.plist */,
 				46546A06289D605700C66CD3 /* PhotoGroup (iOS).entitlements */,
-				464AE354289CBF4800DBA143 /* SwiftCSV.framework */,
-				464AE356289CBF8300DBA143 /* SwiftCSV.framework */,
 				46F0433127D253FE0086F2E4 /* Shared */,
 				46F0434027D253FF0086F2E4 /* macOS */,
 				46F0434927D253FF0086F2E4 /* Tests iOS */,
