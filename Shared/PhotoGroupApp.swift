@@ -162,8 +162,8 @@ func readAssetsCSV(path: String) throws -> [String: Asset] {
         
         let id = try unwrap(row["id"])
         if id != asset_id {
-            let albums = try csvSplit(s: try unwrap(row["albums"]))
-            let albumIds = try csvSplit(s: try unwrap(row["albumIds"]))
+            let _ = try csvSplit(s: try unwrap(row["albums"]))
+            let _ = try csvSplit(s: try unwrap(row["albumIds"]))
             
             asset_id = id
             asset = Asset(
@@ -227,18 +227,17 @@ func writeAssetsCSV(assets: [String:Asset], albums: [String:Album], path:String)
                   String(asset.mediaSubtypes.rawValue),
                   flags,
                   String(resource.type.rawValue),
-                  resource.uti,
+                  csvQuote(resource.uti),
                   csvQuote(resource.filename),
                   resource.size != nil ? String(resource.size!) : "",
                   resource.hash?.toHex() ?? "",
                   csvQuote(albumsNames),
                   csvQuote(albumIds),
-                  resource.path ?? "",
+                  csvQuote(resource.path ?? ""),
             ]
             let line = fields.joined(separator: ",")
             f.write(line.data(using: .utf8)!)
             f.write("\n".data(using: .utf8)!)
-            //print(line)
         }
     }
     
@@ -336,9 +335,9 @@ actor Cache {
     
     func update(asset : inout Asset?, phasset : PHAsset) async {
         
-        let complete = asset?.resources.allSatisfy({ resource in resource.hash != nil && resource.size != nil }) ?? false
+        let complete = asset?.resources.allSatisfy({ resource in resource.hash != nil && resource.size != nil })
 
-        if complete,
+        if complete ?? false,
            let asset = asset,
            let asset_date = asset.modificationDate,
            let phasset_date = phasset.modificationDate,
@@ -451,6 +450,34 @@ struct PhotoGroupApp: App {
     }
     
     var updater : Cache
+    
+    func createAsset() {
+        
+        var placeholder : PHObjectPlaceholder?
+
+        PHPhotoLibrary.shared().performChanges({
+
+            let heic = "/Users/larry/Pictures/Photos Library.photoslibrary/originals/F/F96A88FF-8492-49BA-B891-9508A71AFCA6.heic"
+            let mov = "/Users/larry/Pictures/Photos Library.photoslibrary/originals/F/F96A88FF-8492-49BA-B891-9508A71AFCA6_3.mov"
+
+            let opts1 = PHAssetResourceCreationOptions()
+//            opts1.uniformTypeIdentifier = "public.heic"
+            opts1.originalFilename = "lol.HEIC"
+//
+            let opts2 = PHAssetResourceCreationOptions()
+//            opts2.originalFilename = "LOL.mov"
+//            opts1.uniformTypeIdentifier = "com.apple.quicktime-movie"
+            
+            let req = PHAssetCreationRequest.forAsset()
+            req.addResource(with: .photo, fileURL: URL(fileURLWithPath: heic), options: opts1)
+            req.addResource(with: .pairedVideo, fileURL: URL(fileURLWithPath: mov), options: opts2)
+            placeholder = req.placeholderForCreatedAsset
+
+
+        }, completionHandler:{ ok,err in
+            print("!!!", ok, err as Any, placeholder?.localIdentifier ?? "nil")
+        })
+    }
 
 
     func gotAuthorization(_ status:PHAuthorizationStatus) {
@@ -459,7 +486,11 @@ struct PhotoGroupApp: App {
             return
         }
         print ("==got authorization.")
-        Task { await updater.startUpdating() }
+
+        // Task { await updater.startUpdating() }
+        
+        createAsset()
+
     }
         
             
