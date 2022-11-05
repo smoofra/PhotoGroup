@@ -9,6 +9,8 @@ import SwiftUI
 import Photos
 import CryptoKit
 import SwiftCSV
+import os
+
 
 func csvQuote(_ s:String) -> String {
     if s.rangeOfCharacter(from: CharacterSet(charactersIn: ",\"\r\n")) != nil {
@@ -278,39 +280,46 @@ class AsyncSemaphore {
         var next: UnsafeMutablePointer<waiter>?
     }
 
-    var value : Int
-    var waitList : UnsafeMutablePointer<waiter>?
-    var lock = os_unfair_lock()
+    struct state {
+        var value : Int
+        var waitList : UnsafeMutablePointer<waiter>?
+    }
+
+    var lock : OSAllocatedUnfairLock<state>
     
     init(value: Int) {
-        self.value = value
+        self.lock = OSAllocatedUnfairLock(initialState: state(value: value))
     }
     
     func wait() async {
-        os_unfair_lock_lock(&self.lock)
-        if self.value > 0 {
-            self.value -= 1
-            os_unfair_lock_unlock(&self.lock)
-        } else {
-            let w = UnsafeMutablePointer<waiter>.allocate(capacity: 1)
-            let _ : Void = await withCheckedContinuation({ k in
-                w.initialize(to: waiter(continuation: k, next: self.waitList))
-                self.waitList = w
-                os_unfair_lock_unlock(&self.lock)
-            })
-            w.deallocate()
-        }
+        let w = UnsafeMutablePointer<waiter>.allocate(capacity: 1)
+        await withCheckedContinuation({ k in
+            let done = lock.withLock { s in
+                if s.value > 0 {
+                    s.value -= 1
+                    return true
+                } else {
+                    w.initialize(to: waiter(continuation: k, next: s.waitList))
+                    s.waitList = w
+                    return false
+                }
+            }
+            if done {
+                k.resume()
+            }
+        })
+        w.deallocate()
     }
     
     func signal() {
-        os_unfair_lock_lock(&self.lock)
-        if let w = self.waitList {
-            self.waitList = w.pointee.next
-            w.pointee.continuation.resume()
-        } else {
-            self.value += 1
+        lock.withLock { s in
+            if let w = s.waitList {
+                s.waitList = w.pointee.next
+                w.pointee.continuation.resume()
+            } else {
+                s.value += 1
+            }
         }
-        os_unfair_lock_unlock(&self.lock)
     }
 }
 
